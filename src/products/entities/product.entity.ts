@@ -1,6 +1,6 @@
 import { Category } from "src/categories/entities/category.entity";
 import { Variant } from "src/variant/entities/variant.entity";
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 
 @Entity()
@@ -25,4 +25,10 @@ export class Product {
 
     @Column()
     categoryId!: number;
+
+    @CreateDateColumn()
+    added_at!: Date;
+
+    @UpdateDateColumn()
+    updated_at!: Date;
 }

@@ -1,98 +1,92 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Projekt i kursen DT193G, Fullstack-utveckling med ramverk
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Webtjänst
+Webbtjänsten är ett REST-baserat API byggt med NestJS och PostgreSQL. Syftet är att hantera produkter och deras kategorier samt varianter i ett lagerhanteringsystem, inklusive lagersaldo, priser, och relationer mellan entiteter. Tjänsten använder rollbaserad autentisering där admin kan utföra full CRUD och staff kan läsa data samt uppdatera lagersaldo för varianter.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Installerade paket
+Här är de viktigaste installerade paketen som används i projektet:
+### Backend
+- @nestjs/common
+- @nestjs/core
+- @nestjs/typeorm
+- @nestjs/jwt
+- @nestjs/passport
+### Databas
+- typeorm
+- pg
+### Autentisering & validering
+- passport
+- passport-jwt
+- bcrypt
+- class-validator
+- class-transformer
+### Cloudinary (bildhantering)
+- cloudinary
+- multer
+- multer-storage-cloudinary
 
-## Description
+## Databas entiteter
+API:et erbjuder CRUD-funktionalitet för användare(users), produkter(products), kategorier(kategorier), och varianter(variants).
+### Users
+| Fält | Datatyp | Beskrivning |
+|------|---------|-------------|
+| id | INT | Unikt id|
+| firstname | STRING | Förnamn |
+| lastname | STRING | Efternamn |
+| email | STRING | E-post |
+| password | STRING | Hashat Lösenord |
+| role | STRING | Roll(admin, staff) |
+### Products
+| Fält | Datatyp | Beskrivning |
+|------|---------|-------------|
+| id | INT | Unikt id|
+| name | STRING | Produktnamn |
+| description | STRING | Produktbeskrivning |
+| image_url | STRING | Bildsökväg |
+| categoryId | INT | Foreign key till Category |
+### Categories
+| Fält | Datatyp | Beskrivning |
+|------|---------|-------------|
+| id | INT | Unikt id |
+| name | STRING | Kategorinamn |
+### Variants
+| Fält | Datatyp | Beskrivning |
+|------|---------|-------------|
+| id | INT | Unikt id |
+| size | STRING | Storlek på varianten (default: One Size) |
+| price | DECIMAL | Pris för varianten |
+| stock_quantity | INT | Lagersaldo |
+| productId | INT | Foreign key till Product |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Användning
+Nedan finns URLs ändpunkter för att använda CRUD-operationer:
+| Metod | Ändpunkt | Beskrivning |
+|-------|----------|-------------|
+| GET | /users | Hämta alla användarna |
+| GET | /users/:id | Hämta användare med specifikt id |
+| POST | /users | Lägg till en ny användare |
+| PATCH | /users/:id | Uppdatera användare med specifikt id |
+| DELETE | /users/:id | Radera användare med specifikt id |
+| POST | /admin/create-admin | Lägg till en ny admin |
+| POST | /auth/register | Lägg till ett nytt användarkonto |
+| POST | /auth/login | Logga in till användarkonto |
+| GET | /auth/profile | Hämta användarprofil med skyddade uppgifter |
+| GET | /products | Hämta alla produkterna |
+| GET | /products/:id | Hämta produkt med specifikt id |
+| POST | /products | Lägg till en ny produkt |
+| PATCH | /products/:id | Uppdatera produkt med specifikt id |
+| PATCH | /products/:id/upload-image | Uppdatera bild av en produkt med specifikt id |
+| DELETE | /products/:id | Radera produkt med specifikt id |
+| GET | /categories | Hämta alla kategorierna |
+| GET | /categories/:id | Hämta kategori med specifikt id |
+| POST | /categories | Lägg till en ny kategori |
+| PATCH | /categories/:id | Uppdatera kategori med specifikt id |
+| DELETE | /categories/:id | Radera kategori med specifikt id |
+| GET | /variants | Hämta alla varianterna |
+| GET | /variants/:id | Hämta variant med specifikt id |
+| POST | /variants | Lägg till en ny variant |
+| PATCH | /variants/:id | Uppdatera variant med specifikt id |
+| PATCH | /variants/:id/stock | Uppdatera lagersaldo för specifik produkt |
+| DELETE | /variants/:id | Radera variant med specifikt id |
 
-## Project setup
-
-```bash
-$ npm install
-```
-
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+#### Tommy Issa, tois2401

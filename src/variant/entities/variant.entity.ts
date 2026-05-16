@@ -1,5 +1,5 @@
 import { Product } from "src/products/entities/product.entity";
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 
 
 @Entity()
@@ -21,4 +21,10 @@ export class Variant {
 
     @Column()
     productId!: number;
+    
+    @CreateDateColumn()
+    added_at!: Date;
+    
+    @UpdateDateColumn()
+    updated_at!: Date;
 }
