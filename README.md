@@ -36,6 +36,8 @@ API:et erbjuder CRUD-funktionalitet för användare(users), produkter(products),
 | email | STRING | E-post |
 | password | STRING | Hashat Lösenord |
 | role | STRING | Roll(admin, staff) |
+| created_at | DATETIME | Datum för postens skapande |
+| updated_at | DATETIME | Datum för postens senaste uppdatering |
 ### Products
 | Fält | Datatyp | Beskrivning |
 |------|---------|-------------|
@@ -44,11 +46,15 @@ API:et erbjuder CRUD-funktionalitet för användare(users), produkter(products),
 | description | STRING | Produktbeskrivning |
 | image_url | STRING | Bildsökväg |
 | categoryId | INT | Foreign key till Category |
+| created_at | DATETIME | Datum för postens skapande |
+| updated_at | DATETIME | Datum för postens senaste uppdatering |
 ### Categories
 | Fält | Datatyp | Beskrivning |
 |------|---------|-------------|
 | id | INT | Unikt id |
 | name | STRING | Kategorinamn |
+| created_at | DATETIME | Datum för postens skapande |
+| updated_at | DATETIME | Datum för postens senaste uppdatering |
 ### Variants
 | Fält | Datatyp | Beskrivning |
 |------|---------|-------------|
@@ -57,6 +63,8 @@ API:et erbjuder CRUD-funktionalitet för användare(users), produkter(products),
 | price | DECIMAL | Pris för varianten |
 | stock_quantity | INT | Lagersaldo |
 | productId | INT | Foreign key till Product |
+| created_at | DATETIME | Datum för postens skapande |
+| updated_at | DATETIME | Datum för postens senaste uppdatering |
 
 ## Användning
 Nedan finns URLs ändpunkter för att använda CRUD-operationer:
