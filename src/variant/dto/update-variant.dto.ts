@@ -1,8 +1,13 @@
+import { Transform } from "class-transformer";
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 
 export class UpdateVariantDto {
     @IsOptional()
+    @IsNumber()
+    id?: number;
+    @IsOptional()
+    @Transform(({ value }) => value?.trim() === '' ? 'One Size': value)
     @IsString()
     size?: string;
 

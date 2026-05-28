@@ -1,4 +1,6 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
+import { Type } from "class-transformer";
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { UpdateVariantDto } from "src/variant/dto/update-variant.dto";
 
 
 export class UpdateProductDto {
@@ -16,4 +18,10 @@ export class UpdateProductDto {
     @IsNumber({}, { message: 'category måste anges'})
     @IsNotEmpty({ message: 'Kategori får inte vara tomt'})
     categoryId?: number;
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => UpdateVariantDto)
+    variants?: UpdateVariantDto[];
 }

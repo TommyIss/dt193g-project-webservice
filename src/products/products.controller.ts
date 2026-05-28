@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UploadedFile, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UploadedFile, UseGuards, UseInterceptors, ValidationPipe } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -6,6 +6,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminGuard } from 'src/auth/admin.guard';
 import { AdminOrStaffGuard } from 'src/auth/admin-staff.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @Controller('products')
 export class ProductsController {
@@ -14,10 +15,17 @@ export class ProductsController {
         private readonly cloudinaryService: CloudinaryService
     ) {}
 
+    @UseInterceptors(FileInterceptor('file'))
     @Post()
     @UseGuards(AuthGuard('jwt'), AdminGuard)
-    create(@Body() dto: CreateProductDto, @UploadedFile() file?: Express.Multer.File) {
-        return this.productsService.create(dto, file);
+    create(
+        @Body(new ValidationPipe({ transform: true })) body: any, 
+        @UploadedFile() file?: Express.Multer.File) {
+        
+        if (typeof body.variants === 'string') {
+            body.variants = JSON.parse(body.variants);
+        }
+        return this.productsService.create(body, file);
     }
 
     @Get()
@@ -46,8 +54,15 @@ export class ProductsController {
 
     @Patch(':id/upload-image')
     @UseGuards(AuthGuard('jwt'), AdminGuard)
+    @UseInterceptors(FileInterceptor('file'))
     async uploadImage(@Param('id', ParseIntPipe) id: number, @UploadedFile() file: Express.Multer.File) {
         const imageUrl = await this.cloudinaryService.uploadImage(file);
         return this.productsService.updateImage(id, imageUrl);
+    }
+
+    @Delete(':id/delete-image')
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
+    async deleteImage(@Param('id', ParseIntPipe) id: number) {
+    return this.productsService.deleteImage(id);
     }
 }

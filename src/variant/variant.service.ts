@@ -18,6 +18,13 @@ export class VariantService {
 
     async create(dto: CreateVariantDto) {
         try {
+            if (!dto.productId) {
+                throw new BadRequestException({
+                    field: 'productId',
+                    message: 'productId måste anges när man skapar variant separat'
+                });
+            }
+            
             const product = await this.productRepo.findOne({
                 where: { id: dto.productId }
             });

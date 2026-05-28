@@ -1,4 +1,6 @@
-import { IsNotEmpty, IsString, IsNumber} from "class-validator";
+import { Type } from "class-transformer";
+import { IsNotEmpty, IsString, IsNumber, IsArray, ValidateNested} from "class-validator";
+import { CreateVariantDto } from "src/variant/dto/create-variant.dto";
 
 export class CreateProductDto {
     @IsString({ message: 'Productnamn måste anges'})
@@ -12,4 +14,9 @@ export class CreateProductDto {
     @IsNumber({}, { message: 'Kategory måste anges'})
     @IsNotEmpty({ message: 'Kategori får inte vara tomt'})
     categoryId!: number;
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CreateVariantDto)
+    variants!: CreateVariantDto[];
 }

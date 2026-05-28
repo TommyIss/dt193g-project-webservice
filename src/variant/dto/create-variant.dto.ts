@@ -1,7 +1,8 @@
+import { Transform } from "class-transformer";
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreateVariantDto {
-    @IsOptional()
+    @Transform(({ value }) => value?.trim() === '' ? 'One Size': value)
     @IsString({ message: 'Storlek måste vara sträng'})
     size!: string;
 
@@ -12,7 +13,7 @@ export class CreateVariantDto {
     @IsNumber({}, { message: 'Lagersaldo måste vara ett nummer' })
     stock_quantity!: number;
 
+    @IsOptional()
     @IsNumber({}, { message: 'ProduktId måste vara ett nummer'})
-    @IsNotEmpty({ message: 'ProduktId får inte vara tomt'})
     productId!: number;
 }

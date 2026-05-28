@@ -15,7 +15,10 @@ export class Product {
     description!: string;
 
     @Column({ type: 'varchar', nullable: true })
-    image_url!: string | null;
+    image_url?: string | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    image_public_id?: string | null;
 
     @ManyToOne(() => Category, category => category.products, { onDelete: 'CASCADE'})
     category!: Category;

@@ -6,6 +6,7 @@ import { Category } from 'src/categories/entities/category.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { Variant } from 'src/variant/entities/variant.entity';
 
 @Injectable()
 export class ProductsService {
@@ -14,7 +15,10 @@ export class ProductsService {
         private readonly productRepo: Repository<Product>,
 
         @InjectRepository(Category)
-        private readonly categoryRepo: Repository<Category>,
+        private readonly categoryRepo: Repository<Category>, 
+        
+        @InjectRepository(Variant)
+        private readonly variantRepo: Repository<Variant>,
 
         private readonly cloudinaryService: CloudinaryService
     ) {}
@@ -31,20 +35,34 @@ export class ProductsService {
                     message: 'Kategorin finns inte'
                 });
             }
-
-            let imageUrl: string | null = null;
+            
+            let imageUrl: string | undefined = undefined;
+            let imagePublicId: string | undefined = undefined;
 
             if(file) {
-                imageUrl = await this.cloudinaryService.uploadImage(file);
+                const uploaded = await this.cloudinaryService.uploadImage(file);
+                imageUrl = uploaded.url;
+                imagePublicId = uploaded.publicId;
             }
 
-            const product = await this.productRepo.create({
-                ...dto, 
-                category,
-                image_url: imageUrl ?? null
+            const product = this.productRepo.create({
+                name: dto.name,
+                description: dto.description,
+                categoryId: dto.categoryId,
+                image_url: imageUrl,
+                image_public_id: imagePublicId
             });
-
+            
             const savedProduct = await this.productRepo.save(product);
+
+            if(dto.variants && dto.variants.length > 0) {
+                const variantEntities = dto.variants.map(v => ({
+                    ...v,
+                    productId: savedProduct.id
+                }));
+
+                await this.variantRepo.save(variantEntities);
+            }
 
             return {
                 message: 'Produkten har lagts till',
@@ -109,24 +127,44 @@ export class ProductsService {
         try {
             const product = await this.findOne(id);
 
-            if(dto.categoryId) {
-                const category = await this.categoryRepo.findOne({
-                    where: { id: dto.categoryId }
-                });
+            if (dto.categoryId !== undefined) {
+            const category = await this.categoryRepo.findOne({
+                where: { id: dto.categoryId }
+            });
 
-                if(!category) {
+            if (!category) {
+                throw new BadRequestException({
+                    field: 'categoryId',
+                    message: 'Kategorin finns inte'
+                });
+            }
+
+            product.categoryId = dto.categoryId;
+        }
+
+        if (dto.name !== undefined) product.name = dto.name;
+        if (dto.description !== undefined) product.description = dto.description;
+
+        if (dto.variants && dto.variants.length > 0) {
+            for (const variantDto of dto.variants) {
+
+                if (!variantDto.id) {
                     throw new BadRequestException({
-                        field: 'categoryId',
-                        message: 'Kategorin finns inte'
+                        field: 'variant.id',
+                        message: 'Variant-ID måste anges vid uppdatering'
                     });
                 }
 
-                product.category = category;
+                await this.variantRepo.update(variantDto.id, {
+                    size: variantDto.size,
+                    price: variantDto.price,
+                    stock_quantity: variantDto.stock_quantity
+                });
             }
+        }
 
-            Object.assign(product, dto);
-
-            const savedProduct = await this.productRepo.save(product);
+        // 4. Spara produkten
+        const savedProduct = await this.productRepo.save(product);
 
             return {
                 message: `Produkten med ID ${id} har uppdaterats`,
@@ -160,14 +198,24 @@ export class ProductsService {
         }
     }
 
-    async updateImage(id: number, imageUrl: string) {
+    async updateImage(id: number, image: { url: string; publicId: string }) {
         try {
             const product = await this.findOne(id);
 
-            product.image_url = imageUrl;
+            if (!product) {
+                throw new NotFoundException('Produkten finns inte');
+            }
+
+            // Radera gammal bild om den finns
+            if (product.image_public_id) {
+                await this.cloudinaryService.deleteImage(product.image_public_id);
+            }
+
+            product.image_url = image.url;
+            product.image_public_id = image.publicId;
 
             const savedProduct = await this.productRepo.save(product);
-
+            
             return {
                 message: 'Produktbild uppdaterad',
                 product: savedProduct
@@ -180,4 +228,38 @@ export class ProductsService {
             })
         }
     }
+
+    async deleteImage(id: number) {
+        try {
+            
+        const product = await this.productRepo.findOne({ where: { id } });
+
+        if (!product) {
+            throw new NotFoundException('Produkten finns inte');
+        }
+
+        if (!product.image_public_id) {
+            throw new BadRequestException('Produkten har ingen bild att radera');
+        }
+
+        await this.cloudinaryService.deleteImage(product.image_public_id);
+
+        product.image_url = null;
+        product.image_public_id = null;
+
+        await this.productRepo.save(product);
+
+        return { message: 'Bilden har raderats' };
+
+        } catch (error) {
+            if(error instanceof NotFoundException) throw error;
+            if(error instanceof BadRequestException) throw error;
+            
+            throw new InternalServerErrorException({
+                message: 'Kunde inte uppdatera produktbild'
+            })
+        }    
+    }
+
+
 }
