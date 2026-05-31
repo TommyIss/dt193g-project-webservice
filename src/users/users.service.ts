@@ -225,22 +225,18 @@ export class UsersService {
                 })
             }
 
-            if(!updatedData.password || updatedData.password === '') {
-                throw new BadRequestException({
-                    field: 'password',
-                    message: 'Lösenord måste anges'
-                })
-            }
+            if(updatedData.password && updatedData.password.trim() !== '') {
 
-            if(updatedData.password.length < 6) {
-                throw new BadRequestException({
-                    field: 'password',
-                    message: 'Lösenord måste vara minst 6 tecken'
-                });
-            }
+                if(updatedData.password.length < 6) {
+                    throw new BadRequestException({
+                        field: 'password',
+                        message: 'Lösenord måste vara minst 6 tecken'
+                    });
+                }
 
-            if(updatedData.password) {
                 updatedData.password = await bcrypt.hash(updatedData.password, 10);
+            } else {
+                delete updatedData.password;
             }
 
             Object.assign(user, updatedData);
