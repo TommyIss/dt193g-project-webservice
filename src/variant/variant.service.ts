@@ -108,7 +108,9 @@ export class VariantService {
         try {
             const variant = await this.findOne(id);
 
-            Object.assign(variant, dto);
+            if (dto.size !== undefined) variant.size = dto.size;
+            if (dto.price !== undefined) variant.price = dto.price;
+            if (dto.stock_quantity !== undefined) variant.stock_quantity = dto.stock_quantity;
 
             const savedVariant = await this.variantRepo.save(variant);
 
