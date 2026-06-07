@@ -83,15 +83,8 @@ export class ProductsService {
                 relations: ['category', 'variants']
             });
 
-            if(!products || products.length === 0) {
-                throw new NotFoundException({
-                    message: 'Inga produkter hittades'
-                });
-            }
-
             return products;
         } catch (error) {
-            if(error instanceof NotFoundException) throw error;
 
             throw new InternalServerErrorException({
                 message: 'Kunde inte hämta produkter'

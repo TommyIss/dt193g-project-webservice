@@ -44,15 +44,8 @@ export class CategoriesService {
         try {
             const categories = await this.categoryRepo.find();
 
-            if(!categories || categories.length === 0) {
-                throw new NotFoundException({
-                    message: 'Inga kategorier hittades'
-                });
-            }
-
             return categories;
         } catch (error) {
-            if(error instanceof NotFoundException) throw error;
 
             throw new InternalServerErrorException({
                 message: 'Kunde inte hämta kategorier'
