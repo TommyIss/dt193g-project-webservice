@@ -1,7 +1,9 @@
+import { Transform } from "class-transformer";
 import { IsNotEmpty, IsString } from "class-validator";
 
 export class CreateCategoryDto {
-    @IsString({ message: 'Kategori måste vara en text!' })
-    @IsNotEmpty({ message: 'Kategori måste anges!'})
+    @IsString({ message: 'Kategorinamn måste vara en text!' })
+    @Transform(({ value }) => typeof value === 'string' ? value.trim() : value) 
+    @IsNotEmpty({ message: 'Kategorinamn måste anges!' })
     name!: string;
 }

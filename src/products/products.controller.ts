@@ -13,15 +13,15 @@ export class ProductsController {
     constructor(
         private readonly productsService: ProductsService,
         private readonly cloudinaryService: CloudinaryService
-    ) {}
+    ) { }
 
     @UseInterceptors(FileInterceptor('file'))
     @Post()
     @UseGuards(AuthGuard('jwt'), AdminGuard)
     create(
-        @Body(new ValidationPipe({ transform: true })) body: any, 
+        @Body(new ValidationPipe({ transform: true })) body: any,
         @UploadedFile() file?: Express.Multer.File) {
-        
+
         if (typeof body.variants === 'string') {
             body.variants = JSON.parse(body.variants);
         }
@@ -42,8 +42,16 @@ export class ProductsController {
 
     @Patch(':id')
     @UseGuards(AuthGuard('jwt'), AdminGuard)
-    update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductDto) {
-        return this.productsService.update(id, dto);
+    // 1. Lägg till FileInterceptor här så att NestJS kan läsa FormData!
+    @UseInterceptors(FileInterceptor('file'))
+    update(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateProductDto,
+        // 2. Ta emot filen här (precis som i din create-metod)
+        @UploadedFile() file?: Express.Multer.File
+    ) {
+        
+        return this.productsService.update(id, dto, file);
     }
 
     @Delete(':id')
@@ -63,6 +71,6 @@ export class ProductsController {
     @Delete(':id/delete-image')
     @UseGuards(AuthGuard('jwt'), AdminGuard)
     async deleteImage(@Param('id', ParseIntPipe) id: number) {
-    return this.productsService.deleteImage(id);
+        return this.productsService.deleteImage(id);
     }
 }

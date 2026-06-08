@@ -1,8 +1,8 @@
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsOptional, IsString, MinLength } from "class-validator";
 
 export class UpdateCategoryDto {
     @IsOptional()
-    @IsString({ message: 'Kategori måste vara en text!' })
-    @IsNotEmpty({ message: 'Kategori måste anges!'})
+    @IsString({ message: 'Kategorinamn måste vara en textsträng!' })
+    @MinLength(1, { message: 'Kategorinamn får inte vara tomt!' })
     name?: string;
 }

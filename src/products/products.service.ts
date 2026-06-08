@@ -15,52 +15,86 @@ export class ProductsService {
         private readonly productRepo: Repository<Product>,
 
         @InjectRepository(Category)
-        private readonly categoryRepo: Repository<Category>, 
-        
+        private readonly categoryRepo: Repository<Category>,
+
         @InjectRepository(Variant)
         private readonly variantRepo: Repository<Variant>,
 
         private readonly cloudinaryService: CloudinaryService
-    ) {}
+    ) { }
 
     async create(dto: CreateProductDto, file?: Express.Multer.File) {
         try {
-            const category = await this.categoryRepo.findOne({
-                where: {id: dto.categoryId}
-            });
+            // AIRBAG 1: Manuell validering av tomma värden för att stoppa 500-fel i databasen
+            const validationErrors: Array<string | { field: string; message: string }> = [];
 
-            if(!category) {
-                throw new BadRequestException({
-                    field: 'categoryId',
-                    message: 'Kategorin finns inte'
+            if (!dto.name || String(dto.name).trim() === '') {
+                validationErrors.push('Produktnamn får inte vara tomt!');
+            }
+            if (!dto.description || String(dto.description).trim() === '') {
+                validationErrors.push('Beskrivning får inte vara tomt!');
+            }
+            if (!dto.categoryId || isNaN(Number(dto.categoryId))) {
+                validationErrors.push('Kategori får inte vara tomt!');
+            }
+
+            let checkVariants: any = dto.variants;
+            if (typeof checkVariants === 'string') {
+                try {
+                    checkVariants = JSON.parse(checkVariants);
+                } catch {
+                    checkVariants = [];
+                }
+            }
+
+            if (!checkVariants || !Array.isArray(checkVariants) || checkVariants.length === 0) {
+                validationErrors.push({
+                    field: 'variants',
+                    message: 'Du måste lägga till minst en variant (storlek, pris och lagersaldo)!'
                 });
             }
-            
+
+            // Om vi hittade några tomma fält, avbryt direkt med 400 Bad Request
+            if (validationErrors.length > 0) {
+                throw new BadRequestException(validationErrors);
+            }
+
+            // 2. Kontrollera om kategorin finns i databasen
+            const category = await this.categoryRepo.findOne({
+                where: { id: Number(dto.categoryId) }
+            });
+
+            if (!category) {
+                throw new BadRequestException(['Kategorin finns inte i databasen']);
+            }
+
+            // 3. Hantera bild till Cloudinary
             let imageUrl: string | undefined = undefined;
             let imagePublicId: string | undefined = undefined;
 
-            if(file) {
+            if (file) {
                 const uploaded = await this.cloudinaryService.uploadImage(file);
                 imageUrl = uploaded.url;
                 imagePublicId = uploaded.publicId;
             }
 
+            // 4. Skapa och spara produkten
             const product = this.productRepo.create({
                 name: dto.name,
                 description: dto.description,
-                categoryId: dto.categoryId,
+                categoryId: Number(dto.categoryId),
                 image_url: imageUrl,
                 image_public_id: imagePublicId
             });
-            
+
             const savedProduct = await this.productRepo.save(product);
 
-            if(dto.variants && dto.variants.length > 0) {
-                const variantEntities = dto.variants.map(v => ({
+            // 5. Hantera varianter säkert (DTO:n garanterar nu att det är en array)
+            if (dto.variants && dto.variants.length > 0) {
+                const variantEntities = dto.variants.map((v: any) => ({
                     ...v,
                     productId: savedProduct.id
                 }));
-
                 await this.variantRepo.save(variantEntities);
             }
 
@@ -68,11 +102,18 @@ export class ProductsService {
                 message: 'Produkten har lagts till',
                 product: savedProduct
             }
-        } catch (error) {
-            if(error instanceof BadRequestException) throw error;
 
+        } catch (error: any) {
+            // Logga felet i din backend-terminal så du ser om något annat blir fel
+            console.error('--- FEL VID SKAPANDE AV PRODUKT ---', error);
+
+            // Om det är vårt eget 400-fel, skicka vidare det direkt till frontend
+            if (error instanceof BadRequestException) throw error;
+
+            // Om något annat oväntat kraschar, skicka med kraschmeddelandet i 500-felet
             throw new InternalServerErrorException({
-                message: 'Ett fel uppstod när produkten skulle läggas till'
+                message: 'Ett fel uppstod när produkten skulle läggas till',
+                error: error.message || String(error)
             });
         }
     }
@@ -99,7 +140,7 @@ export class ProductsService {
                 relations: ['category', 'variants']
             });
 
-            if(!product) {
+            if (!product) {
                 throw new NotFoundException({
                     field: 'id',
                     message: `Produkten med ID ${id} finns inte`
@@ -107,71 +148,105 @@ export class ProductsService {
             }
 
             return product;
-        } catch (error) {
-            if(error instanceof NotFoundException) throw error;
+        } catch (error: any) {
+            if (error instanceof NotFoundException) throw error;
 
             throw new InternalServerErrorException({
-                message: 'Kunde inte hämta produkt'
+                message: 'Kunde inte hämta produkt',
+                error: error.message || String(error)
             });
         }
     }
 
-    async update(id: number, dto: UpdateProductDto) {
+    async update(id: number, dto: UpdateProductDto, file?: Express.Multer.File) {
         try {
-            const product = await this.findOne(id);
-
-            if (dto.categoryId !== undefined) {
-            const category = await this.categoryRepo.findOne({
-                where: { id: dto.categoryId }
+            const product = await this.productRepo.findOne({
+                where: { id },
+                relations: ['variants']
             });
 
-            if (!category) {
-                throw new BadRequestException({
-                    field: 'categoryId',
-                    message: 'Kategorin finns inte'
+            if (!product) {
+                throw new NotFoundException({
+                    field: 'id',
+                    message: `Produkten med ID ${id} hittades inte`
                 });
             }
 
-            product.categoryId = dto.categoryId;
-        }
+            const validationErrors: Array<{ field: string; message: string }> = [];
 
-        if (dto.name !== undefined) product.name = dto.name;
-        if (dto.description !== undefined) product.description = dto.description;
+            if (dto.name !== undefined && dto.name.trim() === '') {
+                validationErrors.push({ field: 'name', message: 'Produktnamn får inte vara tomt' });
+            }
 
-        if (dto.variants && dto.variants.length > 0) {
-            for (const variantDto of dto.variants) {
+            if (dto.description !== undefined && dto.description.trim() === '') {
+                validationErrors.push({ field: 'description', message: 'Beskrivning får inte vara tom' });
+            }
 
-                if (!variantDto.id) {
-                    throw new BadRequestException({
-                        field: 'variant.id',
-                        message: 'Variant-ID måste anges vid uppdatering'
+            if (dto.categoryId !== undefined) {
+                const category = await this.categoryRepo.findOne({
+                    where: { id: dto.categoryId }
+                });
+
+                if (!category) {
+                    validationErrors.push({
+                        field: 'categoryId',
+                        message: 'Den valda kategorin finns inte'
                     });
                 }
-
-                await this.variantRepo.update(variantDto.id, {
-                    size: variantDto.size,
-                    price: variantDto.price,
-                    stock_quantity: variantDto.stock_quantity
-                });
             }
-        }
 
-        // 4. Spara produkten
-        const savedProduct = await this.productRepo.save(product);
+            if (validationErrors.length > 0) {
+                throw new BadRequestException(validationErrors);
+            }
+
+            if (file) {
+                const uploaded = await this.cloudinaryService.uploadImage(file);
+                product.image_url = uploaded.url;
+                product.image_public_id = uploaded.publicId;
+            }
+
+            Object.assign(product, {
+                ...(dto.name !== undefined && { name: dto.name }),
+                ...(dto.description !== undefined && { description: dto.description }),
+                ...(dto.categoryId !== undefined && { categoryId: dto.categoryId })
+            });
+
+            const savedProduct = await this.productRepo.save(product);
+
+            if (dto.variants !== undefined) {
+                await this.variantRepo.delete({ productId: id });
+
+                if (dto.variants.length > 0) {
+                    const variantEntities = dto.variants.map(v => ({
+                        ...v,
+                        productId: id
+                    }));
+
+                    await this.variantRepo.save(variantEntities);
+                }
+            }
 
             return {
                 message: `Produkten med ID ${id} har uppdaterats`,
                 product: savedProduct
+            };
+
+        } catch (error: any) {
+            console.error('--- FEL VID PRODUKTUPPDATERING ---', error);
+
+            if (error instanceof BadRequestException || error instanceof NotFoundException) {
+                throw error;
             }
-        } catch (error) {
-            if(error instanceof BadRequestException) throw error;
-            if(error instanceof NotFoundException) throw error;
 
             throw new InternalServerErrorException({
-                message: 'Kunde inte uppdatera produkt'
+                message: 'Ett fel uppstod när produkten skulle uppdateras',
+                error: error.message
             });
         }
     }
+
+
+
 
     async remove(id: number) {
         try {
@@ -183,7 +258,7 @@ export class ProductsService {
                 product: removedProduct
             };
         } catch (error) {
-            if(error instanceof NotFoundException) throw error;
+            if (error instanceof NotFoundException) throw error;
 
             throw new InternalServerErrorException({
                 message: 'Kunde inte radera produkt'
@@ -208,13 +283,13 @@ export class ProductsService {
             product.image_public_id = image.publicId;
 
             const savedProduct = await this.productRepo.save(product);
-            
+
             return {
                 message: 'Produktbild uppdaterad',
                 product: savedProduct
             };
         } catch (error) {
-            if(error instanceof NotFoundException) throw error;
+            if (error instanceof NotFoundException) throw error;
 
             throw new InternalServerErrorException({
                 message: 'Kunde inte uppdatera produktbild'
@@ -224,34 +299,34 @@ export class ProductsService {
 
     async deleteImage(id: number) {
         try {
-            
-        const product = await this.productRepo.findOne({ where: { id } });
 
-        if (!product) {
-            throw new NotFoundException('Produkten finns inte');
-        }
+            const product = await this.productRepo.findOne({ where: { id } });
 
-        if (!product.image_public_id) {
-            throw new BadRequestException('Produkten har ingen bild att radera');
-        }
+            if (!product) {
+                throw new NotFoundException('Produkten finns inte');
+            }
 
-        await this.cloudinaryService.deleteImage(product.image_public_id);
+            if (!product.image_public_id) {
+                throw new BadRequestException('Produkten har ingen bild att radera');
+            }
 
-        product.image_url = null;
-        product.image_public_id = null;
+            await this.cloudinaryService.deleteImage(product.image_public_id);
 
-        await this.productRepo.save(product);
+            product.image_url = null;
+            product.image_public_id = null;
 
-        return { message: 'Bilden har raderats' };
+            await this.productRepo.save(product);
+
+            return { message: 'Bilden har raderats' };
 
         } catch (error) {
-            if(error instanceof NotFoundException) throw error;
-            if(error instanceof BadRequestException) throw error;
-            
+            if (error instanceof NotFoundException) throw error;
+            if (error instanceof BadRequestException) throw error;
+
             throw new InternalServerErrorException({
                 message: 'Kunde inte uppdatera produktbild'
             })
-        }    
+        }
     }
 
 

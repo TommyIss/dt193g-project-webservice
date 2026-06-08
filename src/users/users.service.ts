@@ -54,8 +54,11 @@ export class UsersService {
             const hashedPassword = await bcrypt.hash(data.password, 10);
 
             const user = this.userRepo.create({
-                ...data, 
-                password: hashedPassword 
+                firstname: data.firstname,
+                lastname: data.lastname,
+                email: data.email,
+                password: hashedPassword,
+                role: data.role 
             });
 
             const savedUser = await this.userRepo.save(user);
@@ -182,7 +185,10 @@ export class UsersService {
     async findByEmail(email: string) {
         try {
             
-            const user = await this.userRepo.findOne({ where: { email }});
+            const user = await this.userRepo.createQueryBuilder('user')
+                .addSelect('user.password') // <-- HÄR HÄMTAR VI LÖSENORDET!
+                .where('user.email = :email', { email })
+                .getOne();
 
             if(!user) {
                 throw new NotFoundException(`Kontot med e-post ${email} finns ej!`);
